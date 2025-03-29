@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票筛选器</title>
+    <link rel="stylesheet" href="style.css"> <!-- 链接你的 CSS 文件 -->
+</head>
+<body>
+
+    <h1>股票筛选器</h1>
+
+    <div class="filters">
+        <h2>筛选条件</h2>
+        <div>
+            <label for="pe-min">市盈率 (PE) 最小:</label>
+            <input type="number" id="pe-min" placeholder="例如 0">
+        </div>
+        <div>
+            <label for="pe-max">市盈率 (PE) 最大:</label>
+            <input type="number" id="pe-max" placeholder="例如 30">
+        </div>
+        <div>
+            <label for="market-cap-min">市值 (亿) 最小:</label>
+            <input type="number" id="market-cap-min" placeholder="例如 100">
+        </div>
+        <!-- 添加更多筛选条件，例如行业、股息率等 -->
+        <div>
+            <label for="industry">行业:</label>
+            <select id="industry">
+                <option value="">所有行业</option>
+                <!-- 行业选项可以在 JS 中动态加载，或者预先写好 -->
+                <option value="科技">科技</option>
+                <option value="金融">金融</option>
+                <option value="消费">消费</option>
+            </select>
+        </div>
+        <button id="filter-button">应用筛选</button>
+        <button id="reset-button">重置</button>
+    </div>
+
+    <div class="results">
+        <h2>筛选结果</h2>
+        <div id="loading-indicator" style="display: none;">正在加载数据...</div>
+        <div id="error-message" style="color: red; display: none;"></div>
+        <table id="stock-table">
+            <thead>
+                <tr>
+                    <th>代码</th>
+                    <th>名称</th>
+                    <th>市盈率(PE)</th>
+                    <th>市值(亿)</th>
+                    <th>行业</th>
+                    <!-- 根据你的 API 数据添加更多列 -->
+                </tr>
+            </thead>
+            <tbody id="stock-table-body">
+                <!-- 股票数据将通过 JavaScript 填充到这里 -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="script.js"></script> <!-- 链接你的 JavaScript 文件 -->
+</body>
+</html>

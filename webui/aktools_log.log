@@ -17,3 +17,59 @@
 2025-03-30 03:14:31,163 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
 2025-03-30 03:14:31,410 - AKToolsLog - INFO - 获取到 stock_individual_info_em 的数据
 2025-03-30 03:14:32,011 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:40:36,926 - AKToolsLog - INFO - 这是一个信息级别的日志消息
+2025-03-30 03:40:40,258 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:40:43,562 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
+2025-03-30 03:40:43,724 - AKToolsLog - INFO - 获取到 stock_individual_info_em 的数据
+2025-03-30 03:40:44,244 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:41:26,167 - AKToolsLog - INFO - 获取到 stock_hsgt_stock_statistics_em 的数据
+2025-03-30 03:41:27,975 - AKToolsLog - INFO - 获取到 stock_financial_analysis_indicator 的数据
+2025-03-30 03:41:28,010 - AKToolsLog - INFO - 请输入正确的参数错误 'zygcfx'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:28,134 - AKToolsLog - INFO - 获取到 stock_financial_abstract 的数据
+2025-03-30 03:41:29,996 - AKToolsLog - INFO - 请输入正确的参数错误 '837344'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:30,228 - AKToolsLog - INFO - 请输入正确的参数错误 'sdgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:30,242 - AKToolsLog - INFO - 请输入正确的参数错误 'sdltgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:32,764 - AKToolsLog - INFO - 请输入正确的参数错误 '837344'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:32,794 - AKToolsLog - INFO - 请输入正确的参数错误 'sdltgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:32,795 - AKToolsLog - INFO - 请输入正确的参数错误 'sdgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:41:38,406 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
+2025-03-30 03:41:38,582 - AKToolsLog - INFO - 获取到 stock_individual_info_em 的数据
+2025-03-30 03:41:39,218 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:41:42,268 - AKToolsLog - INFO - 获取到 stock_hsgt_stock_statistics_em 的数据
+2025-03-30 03:42:54,847 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
+2025-03-30 03:42:54,989 - AKToolsLog - INFO - 获取到 stock_individual_info_em 的数据
+2025-03-30 03:42:55,668 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:44:10,798 - AKToolsLog - INFO - 获取到 stock_hsgt_stock_statistics_em 的数据
+2025-03-30 03:44:11,332 - AKToolsLog - INFO - 获取到 stock_financial_analysis_indicator 的数据
+2025-03-30 03:44:11,381 - AKToolsLog - INFO - 获取到 stock_financial_abstract 的数据
+2025-03-30 03:44:11,410 - AKToolsLog - INFO - 请输入正确的参数错误 'zygcfx'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:14,524 - AKToolsLog - INFO - 获取到 stock_news_em 的数据
+2025-03-30 03:44:38,566 - AKToolsLog - INFO - 请输入正确的参数错误 '920029'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:38,784 - AKToolsLog - INFO - 请输入正确的参数错误 'sdltgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:38,785 - AKToolsLog - INFO - 请输入正确的参数错误 'sdgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,289 - AKToolsLog - INFO - 请输入正确的参数错误 '920029'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,353 - AKToolsLog - INFO - 请输入正确的参数错误 'sdgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,356 - AKToolsLog - INFO - 请输入正确的参数错误 'sdltgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,503 - AKToolsLog - INFO - 请输入正确的参数错误 '920029'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,539 - AKToolsLog - INFO - 请输入正确的参数错误 'sdgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,539 - AKToolsLog - INFO - 请输入正确的参数错误 'sdltgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,685 - AKToolsLog - INFO - 请输入正确的参数错误 '920029'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,729 - AKToolsLog - INFO - 请输入正确的参数错误 'sdltgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:44:39,730 - AKToolsLog - INFO - 请输入正确的参数错误 'sdgd'，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://akshare.akfamily.xyz
+2025-03-30 03:45:35,051 - AKToolsLog - INFO - 获取到 stock_zh_a_gdhs 的数据
+2025-03-30 03:45:39,018 - AKToolsLog - INFO - 获取到 stock_zh_a_gdhs 的数据
+2025-03-30 03:48:04,260 - AKToolsLog - INFO - 获取到 stock_lhb_ggtj_sina 的数据
+2025-03-30 03:48:41,645 - AKToolsLog - INFO - 获取到 stock_zh_a_gdhs 的数据
+2025-03-30 03:48:48,107 - AKToolsLog - INFO - 获取到 stock_zh_a_gdhs 的数据
+2025-03-30 03:48:54,590 - AKToolsLog - INFO - 获取到 stock_zh_a_gdhs 的数据
+2025-03-30 03:49:01,146 - AKToolsLog - INFO - 获取到 stock_zh_a_gdhs 的数据
+2025-03-30 03:49:07,547 - AKToolsLog - INFO - 获取到 stock_lhb_detail_daily_sina 的数据
+2025-03-30 03:50:26,042 - AKToolsLog - INFO - 获取到 stock_main_stock_holder 的数据
+2025-03-30 03:50:47,300 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
+2025-03-30 03:50:47,441 - AKToolsLog - INFO - 获取到 stock_individual_info_em 的数据
+2025-03-30 03:50:48,058 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:52:04,944 - AKToolsLog - INFO - 获取到 stock_zh_a_hist 的数据
+2025-03-30 03:52:05,131 - AKToolsLog - INFO - 获取到 stock_individual_info_em 的数据
+2025-03-30 03:52:05,602 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:52:12,834 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
+2025-03-30 03:52:19,139 - AKToolsLog - INFO - 获取到 stock_zh_a_spot_em 的数据
