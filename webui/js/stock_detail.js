@@ -1,557 +1,325 @@
 // js/stock_detail.js
 
-// 使 ECharts 实例全局可访问，以便进行更新（例如，时间范围更改）
-let myChart = null;
-
-document.addEventListener('DOMContentLoaded', async () => { // 使用 async 进行初始等待
-    // --- 配置 ---
-    const aktoolsApiBaseUrl = 'http://127.0.0.1:8080'; // *** 您的 AKTools 服务器地址 ***
-
-    // --- 获取 DOM 元素 ---
+document.addEventListener('DOMContentLoaded', () => {
     const stockNameElement = document.getElementById('stock-name');
     const stockSymbolElement = document.getElementById('stock-symbol');
-    const tabButtons = document.querySelectorAll('.tab-button');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-
-    // K 线元素
     const chartContainer = document.getElementById('kline-chart');
     const chartLoadingElement = document.getElementById('chart-loading');
-    const rangeSelector = document.getElementById('time-range-selector'); // 可选的时间范围按钮容器
+    const aktoolsApiBaseUrl = 'http://127.0.0.1:8080'; // 确认 AKTools 地址
 
-    // 其他选项卡内容元素
-    const companyInfoContent = document.getElementById('company-info-content');
-    const fundflowContent = document.getElementById('fundflow-content');
-    // const fundflowChartContainer = document.getElementById('fundflow-chart'); // 可选的资金流向图表
-    const lhbContent = document.getElementById('lhb-content');
-    const lhbTable = document.getElementById('lhb-table');
-    const lhbTableBody = lhbTable ? lhbTable.querySelector('tbody') : null;
-    const lhbTableHead = lhbTable ? lhbTable.querySelector('thead') : null;
-    const shareholderContent = document.getElementById('shareholder-content');
-    const shareholderTable = document.getElementById('shareholder-table');
-    const shareholderTableBody = shareholderTable ? shareholderTable.querySelector('tbody') : null;
-    const shareholderTableHead = shareholderTable ? shareholderTable.querySelector('thead') : null;
-    const newsContent = document.getElementById('news-content');
-    const newsList = document.getElementById('news-list');
-    const quoteContent = document.getElementById('quote-content');
-
-    // --- 从 URL 获取股票代码 ---
+    // --- 1. 从 URL 获取股票代码 ---
     const urlParams = new URLSearchParams(window.location.search);
     const symbol = urlParams.get('symbol');
 
     if (!symbol) {
         stockNameElement.textContent = '错误';
-        stockSymbolElement.textContent = '';
-        document.querySelector('main').innerHTML = '<h2 style="color: red;">错误：URL中未提供股票代码 (symbol)。</h2><p>请确保链接包含 `?symbol=XXXXXX`</p>';
-        return; // 停止执行
+        stockSymbolElement.textContent = '未提供股票代码';
+        chartLoadingElement.textContent = '无法加载数据：URL中缺少股票代码参数。';
+        return; // 没有代码则停止执行
     }
+
     stockSymbolElement.textContent = symbol;
-    stockNameElement.textContent = `股票 ${symbol}`; // 初始名称，将由 fetchCompanyInfo 更新
+    // 可以在这里额外请求一次实时行情接口获取最新名称，或者直接显示代码
+    // 为简化，先只显示代码，名称可以在获取历史数据后尝试从某处获得（如果API返回）
+    stockNameElement.textContent = `股票 ${symbol}`; // 临时名称
 
 
-    // --- API 获取的辅助函数 ---
-    async function fetchData(apiUrl, loadingElement, errorMsgPrefix) {
-        if (loadingElement) loadingElement.textContent = '加载中...';
-        if (loadingElement && loadingElement.style) loadingElement.style.display = 'block'; // 确保加载可见
+    // --- 2. 获取历史 K 线数据 ---
+    
+async function fetchHistoricalData(stockSymbol, period = 'daily', adjust = 'qfq', startDate = null, endDate = null) { // 增加更多参数，startDate默认为null
+    const historyApiUrl = `${aktoolsApiBaseUrl}/api/public/stock_zh_a_hist`;
+    // --- 修改部分：动态构建参数 ---
+    const params = new URLSearchParams({
+        symbol: stockSymbol,
+        period: period,
+        adjust: adjust
+    });
+    // 只有当 startDate 和 endDate 有值时才添加到 URL 参数中
+    if (startDate) {
+        params.append('start_date', startDate);
+    }
+    if (!endDate) {
+        // 如果没提供结束日期，默认为今天
+        endDate = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+    }
+    params.append('end_date', endDate)
 
-        console.log(`Fetching: ${apiUrl}`); // 记录 API 调用以进行调试
+        const requestUrl = `${historyApiUrl}?${params.toString()}`;
+        console.log(`Fetching historical data from: ${requestUrl}`);
+        chartLoadingElement.textContent = '正在加载K线数据...';
+
         try {
-            const response = await fetch(apiUrl);
+            const response = await fetch(requestUrl);
             if (!response.ok) {
-                let errorDetails = '';
-                try {
-                    errorDetails = await response.text(); // 尝试获取文本以获取更多信息
-                } catch (e) {}
-                 console.error(`HTTP error ${response.status} for ${apiUrl}: ${errorDetails}`);
-                 throw new Error(`HTTP ${response.status}${errorDetails ? ': ' + errorDetails.substring(0,100) + '...' : ''}`); // 限制错误长度
+                const errorText = await response.text(); // Try to get error details
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
             const data = await response.json();
-            console.log(`Data for ${apiUrl}:`, data); // 记录接收到的数据
+            console.log("Historical data received:", data);
 
-            if (loadingElement && loadingElement.style) loadingElement.style.display = 'none'; // 成功后隐藏加载
-            return data;
+            if (data && Array.isArray(data) && data.length > 0) {
+                 // 如果API返回的数据里包含名称，可以在这里更新 H1
+                 // if(data[0] && data[0]['名称']) { stockNameElement.textContent = data[0]['名称']; }
+                 return data; // 返回获取到的数据
+            } else {
+                 chartLoadingElement.textContent = '未能加载历史数据或数据为空。';
+                 console.warn("Received historical data is empty or not in expected format:", data);
+                 return null;
+            }
 
         } catch (error) {
-            console.error(`${errorMsgPrefix} Error:`, error);
-            if (loadingElement) loadingElement.textContent = `${errorMsgPrefix}失败: ${error.message}`;
-            return null; // 指示失败
+            console.error("Error fetching historical data:", error);
+            chartLoadingElement.textContent = `加载历史数据失败: ${error.message}`;
+            return null;
         }
     }
 
-    // --- 选项卡切换逻辑 ---
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabType = button.dataset.tab;
-
-            // 更新活动状态
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabPanes.forEach(pane => pane.classList.remove('active'));
-            button.classList.add('active');
-            document.getElementById(`tab-${tabType}`)?.classList.add('active');
-
-            // 仅当内容仍然显示“加载中...”时才延迟加载数据
-            switch (tabType) {
-                case 'info':
-                    if (companyInfoContent?.textContent.includes('加载中')) fetchCompanyInfo(symbol);
-                    break;
-                case 'fundflow':
-                    if (fundflowContent?.textContent.includes('加载中')) fetchFundFlow(symbol);
-                    break;
-                case 'lhb':
-                    if (lhbContent?.textContent.includes('加载中')) fetchLhb(symbol);
-                    break;
-                case 'shareholder':
-                    if (shareholderContent?.textContent.includes('加载中')) fetchShareholders(symbol);
-                    break;
-                case 'news':
-                    if (newsContent?.textContent.includes('加载中')) fetchNews(symbol);
-                    break;
-                case 'quote':
-                    if (quoteContent?.textContent.includes('加载中')) fetchRealtimeQuote(symbol);
-                    // （可选）设置一个间隔来刷新报价数据
-                    break;
-                // K 线最初已加载
-            }
-        });
-    });
-
-    // --- 数据获取函数 ---
-
-    // 1. 获取历史 K 线数据
-    async function fetchHistoricalData(stockSymbol, period = 'daily', adjust = 'qfq', startDate = null, endDate = null) {
-        // *** 在 AKTools /docs 中验证此 API 路径 ***
-        const historyApiUrl = `${aktoolsApiBaseUrl}/api/public/stock_zh_a_hist`;
-        const params = new URLSearchParams({ symbol: stockSymbol, period, adjust });
-        if (startDate) params.append('start_date', startDate);
-        if (!endDate) endDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        params.append('end_date', endDate);
-
-        // 专门为图表显示加载指示器
-        if (chartLoadingElement) chartLoadingElement.style.display = 'block';
-        if (myChart) myChart.clear(); // 如果存在，则清除之前的图表
-
-        const data = await fetchData(`${historyApiUrl}?${params.toString()}`, chartLoadingElement, '获取K线数据');
-
-        if (data && Array.isArray(data) && data.length > 0) {
-            renderKlineChart(data); // 成功后渲染图表
-        } else if (data === null) { // 显式检查获取错误
-            if (chartLoadingElement) chartLoadingElement.textContent = '加载K线数据失败。请检查网络或AKTools服务。';
-        } else { // 数据为空数组或意外格式
-            if (chartLoadingElement) chartLoadingElement.textContent = '未找到符合条件的K线数据。';
-        }
-    }
-
-    // 2. 获取公司信息
-    async function fetchCompanyInfo(sym) {
-        // *** 在 AKTools /docs 中验证此 API 路径 ***
-        const apiUrl = `${aktoolsApiBaseUrl}/api/public/stock_individual_info_em?symbol=${sym}`;
-        const data = await fetchData(apiUrl, companyInfoContent, '获取公司概况');
-
-        if (data && Array.isArray(data) && data.length > 0) {
-            let html = '<ul style="list-style: none; padding: 0;">';
-            let stockName = `股票 ${sym}`; // 默认名称
-            data.forEach(item => {
-                 // *** 从实际 API 响应中验证数据键（“item”、“value”）***
-                 const key = item['item'];
-                 const value = item['value'];
-                 html += `<li style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;"><strong>${key}:</strong> ${value || 'N/A'}</li>`;
-                 if (key === '股票简称' || key === '名称') { // 更新标题名称
-                     stockName = value;
-                 }
-            });
-            html += '</ul>';
-            if (companyInfoContent) companyInfoContent.innerHTML = html;
-            if (stockNameElement) stockNameElement.textContent = stockName; // 更新主标题
-        } else if (data !== null) { // 获取成功但没有数据
-            if (companyInfoContent) companyInfoContent.textContent = '未能加载公司概况数据。';
-        }
-        // 如果数据为 null，则错误消息已由 fetchData 设置
-    }
-
-    // 3. 获取资金流向
-    async function fetchFundFlow(sym) {
-        // *** 在 AKTools /docs 中验证此 API 路径和参数名称（“stock”或“symbol”）***
-        const apiUrl = `${aktoolsApiBaseUrl}/api/public/stock_individual_fund_flow?stock=${sym}`;
-        const data = await fetchData(apiUrl, fundflowContent, '获取资金流向');
-
-        if (data && Array.isArray(data) && data.length > 0) {
-            // 假设第一项是最新的数据
-            const latestFlow = data[0];
-            // *** 从实际 API 响应中验证所有数据键 ***
-            let html = `<p style="font-weight: bold; margin-bottom: 10px;">日期: ${latestFlow['日期'] || 'N/A'}</p>`;
-            html += '<table class="simple-table">'; // 使用简单的表格以获得更好的对齐
-            html += `<tr><td>主力净流入:</td><td>${latestFlow['主力净流入-净额'] || 'N/A'} (${latestFlow['主力净流入-净占比'] || 'N/A'}%)</td></tr>`;
-            html += `<tr><td>超大单净流入:</td><td>${latestFlow['超大单净流入-净额'] || 'N/A'} (${latestFlow['超大单净流入-净占比'] || 'N/A'}%)</td></tr>`;
-            html += `<tr><td>大单净流入:</td><td>${latestFlow['大单净流入-净额'] || 'N/A'} (${latestFlow['大单净流入-净占比'] || 'N/A'}%)</td></tr>`;
-            html += `<tr><td>中单净流入:</td><td>${latestFlow['中单净流入-净额'] || 'N/A'} (${latestFlow['中单净流入-净占比'] || 'N/A'}%)</td></tr>`;
-            html += `<tr><td>小单净流入:</td><td>${latestFlow['小单净流入-净额'] || 'N/A'} (${latestFlow['小单净流入-净占比'] || 'N/A'}%)</td></tr>`;
-            html += '</table>';
-            if (fundflowContent) fundflowContent.innerHTML = html;
-            // 可选：在此处使用 latestFlow 数据渲染一个简单的图表
-            // renderFundFlowChart(latestFlow);
-        } else if (data !== null) {
-            if (fundflowContent) fundflowContent.textContent = '未能加载资金流向数据。';
-        }
-    }
-
-    // 4. 获取龙虎榜 (LHB)
-    async function fetchLhb(sym) {
-        // *** 在 AKTools /docs 中验证此 API 路径和参数（例如，日期范围？）***
-        const apiUrl = `${aktoolsApiBaseUrl}/api/public/stock_lhb_detail_em?symbol=${sym}`; // 假设获取最新数据
-        const data = await fetchData(apiUrl, lhbContent, '获取龙虎榜');
-
-        if (lhbTableBody && lhbTableHead && data && Array.isArray(data) && data.length > 0) {
-            lhbTableBody.innerHTML = ''; // 清除之前的数据
-            lhbTableHead.innerHTML = ''; // 清除之前的标题
-
-            // 从第一个数据项的键动态创建标题行
-            // *** 从实际 API 响应中验证键 ***
-            const headers = Object.keys(data[0]);
-            let headerHtml = '<tr>';
-            headers.forEach(key => headerHtml += `<th>${key}</th>`);
-            headerHtml += '</tr>';
-            lhbTableHead.innerHTML = headerHtml;
-
-            // 填充数据行
-            data.forEach(item => {
-                let rowHtml = '<tr>';
-                headers.forEach(key => {
-                    // 使用键访问数据。处理 null/undefined。
-                    const value = item[key];
-                    rowHtml += `<td>${value !== null && value !== undefined ? value : 'N/A'}</td>`;
-                });
-                rowHtml += '</tr>';
-                lhbTableBody.innerHTML += rowHtml;
-            });
-             if(lhbContent) lhbContent.style.display = 'none'; // 隐藏加载文本
-
-        } else if (data !== null) {
-             if (lhbContent) lhbContent.textContent = '最近无龙虎榜数据或加载失败。';
-             if (lhbTableBody) lhbTableBody.innerHTML = ''; // 清除表体
-             if (lhbTableHead) lhbTableHead.innerHTML = ''; // 清除表头
-        }
-         // 确保在错误或没有数据时显示加载文本
-         if (lhbContent && (data === null || !data || data.length === 0)) {
-             lhbContent.style.display = 'block';
-         }
-    }
-
-
-    // 5. 获取股东信息
-    async function fetchShareholders(sym) {
-        // *** 在 AKTools /docs 中验证此 API 路径 ***
-        // 常用端点：stock_gdfx_top_10_em（前 10 名）、stock_gdfx_free_top_10_em（前 10 名自由流通股）
-        const apiUrl = `${aktoolsApiBaseUrl}/api/public/stock_gdfx_top_10_em?symbol=${sym}`;
-        const data = await fetchData(apiUrl, shareholderContent, '获取股东信息');
-
-        if (shareholderTableBody && shareholderTableHead && data && Array.isArray(data) && data.length > 0) {
-            shareholderTableBody.innerHTML = '';
-            shareholderTableHead.innerHTML = '';
-
-             // *** 从实际 API 响应中验证键 ***
-            const headers = Object.keys(data[0]);
-            let headerHtml = '<tr>';
-            // 您可能需要显式定义顺序和名称：
-            // const displayHeaders = {'股东名称': '股东名称', '持股数量': '持股数(万股)', ...};
-            headers.forEach(key => headerHtml += `<th>${key}</th>`);
-            headerHtml += '</tr>';
-            shareholderTableHead.innerHTML = headerHtml;
-
-            data.forEach(item => {
-                let rowHtml = '<tr>';
-                headers.forEach(key => {
-                    const value = item[key];
-                    // 如果需要，格式化数字、百分比等
-                    rowHtml += `<td>${value !== null && value !== undefined ? value : 'N/A'}</td>`;
-                });
-                rowHtml += '</tr>';
-                shareholderTableBody.innerHTML += rowHtml;
-            });
-             if(shareholderContent) shareholderContent.style.display = 'none'; // 隐藏加载文本
-
-        } else if (data !== null) {
-             if (shareholderContent) shareholderContent.textContent = '未能加载股东信息。';
-             if (shareholderTableBody) shareholderTableBody.innerHTML = '';
-             if (shareholderTableHead) shareholderTableHead.innerHTML = '';
-        }
-         if (shareholderContent && (data === null || !data || data.length === 0)) {
-             shareholderContent.style.display = 'block';
-         }
-    }
-
-    // 6. 获取新闻
-    async function fetchNews(sym) {
-        // *** 在 AKTools /docs 中验证此 API 路径 ***
-        const apiUrl = `${aktoolsApiBaseUrl}/api/public/stock_news_em?symbol=${sym}`;
-        const data = await fetchData(apiUrl, newsContent, '获取相关资讯');
-
-        if (newsList && data && Array.isArray(data) && data.length > 0) {
-            newsList.innerHTML = ''; // 清除之前的列表
-            data.forEach(item => {
-                 // *** 从实际 API 响应中验证键（“title”、“url”、“datetime”）***
-                 const title = item['title'];
-                 const url = item['url'];
-                 const dateTime = item['datetime'];
-
-                 if (title && url) { // 仅添加具有标题和 URL 的新闻
-                     const li = document.createElement('li');
-                     const link = document.createElement('a');
-                     link.href = url;
-                     link.textContent = title;
-                     link.target = '_blank'; // 在新选项卡中打开
-                     link.rel = 'noopener noreferrer'; // 安全最佳实践
-                     li.appendChild(link);
-
-                     if (dateTime) {
-                         const timeSpan = document.createElement('span');
-                         timeSpan.textContent = ` (${dateTime})`;
-                         timeSpan.style.fontSize = '0.9em';
-                         timeSpan.style.color = '#666';
-                         timeSpan.style.marginLeft = '10px';
-                         li.appendChild(timeSpan);
-                     }
-                     newsList.appendChild(li);
-                 }
-            });
-             if(newsContent) newsContent.style.display = 'none'; // 隐藏加载文本
-        } else if (data !== null) {
-             if (newsContent) newsContent.textContent = '未能加载相关资讯。';
-             if (newsList) newsList.innerHTML = '';
-        }
-        if (newsContent && (data === null || !data || data.length === 0)) {
-             newsContent.style.display = 'block';
-         }
-    }
-
-    // 7. 获取实时报价
-    async function fetchRealtimeQuote(sym) {
-        // 使用现货 API，需要过滤
-        // *** 在 AKTools /docs 中验证此 API 路径 ***
-        const apiUrl = `${aktoolsApiBaseUrl}/api/public/stock_zh_a_spot_em`;
-        const allQuotes = await fetchData(apiUrl, quoteContent, '获取实时行情');
-
-        if (allQuotes && Array.isArray(allQuotes)) {
-            // *** 验证股票代码的键（“代码”）***
-            const quoteData = allQuotes.find(q => q['代码'] === sym);
-
-            if (quoteData) {
-                let html = '<ul style="list-style: none; padding: 0; column-count: 2; column-gap: 20px;">'; // 使用列以获得更好的布局
-                // *** 从实际 API 响应中验证键并选择要显示的字段 ***
-                const fieldsToShow = ['最新价', '涨跌额', '涨跌幅', '今开', '最高', '最低', '昨收', '成交量', '成交额', '换手率', '市盈率-动态', '市净率', '总市值', '流通市值', '振幅', '委比', '量比', '买一价', '卖一价', '买一量', '卖一量']; // 如果需要，添加更多字段
-                for (const key in quoteData) {
-                    if (fieldsToShow.includes(key)) {
-                        let value = quoteData[key];
-                        let displayValue = value !== null && value !== undefined ? value : 'N/A';
-                        // 基本格式化
-                        if ((key.includes('幅') || key.includes('率') || key.includes('比')) && typeof value === 'number') {
-                            displayValue = `${value.toFixed(2)}%`; // 添加 % 并格式化小数
-                        } else if (key.includes('市值') || key.includes('额')) {
-                            // 添加基本的大数字格式（可选）
-                            displayValue = formatLargeNumber(value);
-                        } else if (key.includes('成交量') || key.includes('量')) {
-                             displayValue = formatLargeNumber(value, 0); // 格式化成交量，不带小数
-                        }
-
-
-                        html += `<li style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;"><strong>${key}:</strong> ${displayValue}</li>`;
-                    }
-                }
-                html += '</ul>';
-                if (quoteContent) quoteContent.innerHTML = html;
-            } else {
-                 if (quoteContent) quoteContent.textContent = `在实时行情列表中未找到代码 ${sym}。`;
-            }
-        } else if (allQuotes !== null) {
-            if (quoteContent) quoteContent.textContent = '加载实时行情列表失败或为空。';
-        }
-        // 错误由 fetchData 处理
-    }
-
-
-    // --- ECharts 渲染函数 ---
+    // --- 3 & 4. 处理数据并使用 ECharts 渲染图表 ---
     function renderKlineChart(rawData) {
-        if (!chartContainer || !rawData || rawData.length === 0) {
-            console.warn("Chart container or data missing for renderKlineChart");
-            if (chartLoadingElement) chartLoadingElement.textContent = '数据不足或图表容器不存在。';
+        if (!rawData || rawData.length === 0) {
+            chartLoadingElement.textContent = '没有足够的历史数据来绘制图表。';
             return;
         }
-        if (chartLoadingElement) chartLoadingElement.style.display = 'none'; // 隐藏加载文本
+         // 隐藏加载提示
+        chartLoadingElement.style.display = 'none';
 
-        // 初始化或重用 ECharts 实例
-        if (!myChart) {
-             myChart = echarts.init(chartContainer);
-             // 仅添加一次resize监听器
-             window.addEventListener('resize', () => {
-                if (myChart) {
-                    myChart.resize();
-                }
-            });
-        } else {
-             myChart.clear(); // 在设置新选项之前清除之前的选项
-        }
+        // 初始化 ECharts 实例
+        const myChart = echarts.init(chartContainer);
 
+        // 数据处理：将 AKShare 返回的格式转换为 ECharts 需要的格式
+        // ECharts K线图需要: [['日期', '开盘', '收盘', '最低', '最高', '成交量'], ...]
+        // 并且日期通常是 'YYYY-MM-DD' 格式
+        const processedData = rawData.map(item => {
+            // 确保使用正确的列名! 检查 AKTools API 的实际返回值
+            return [
+                item['日期'],       // 通常是 'YYYY-MM-DD' 或 'YYYYMMDD'，ECharts 能识别多种格式
+                item['开盘'],
+                item['收盘'],
+                item['最低'],
+                item['最高'],
+                item['成交量']      // 成交量用于下方柱状图
+            ];
+        });
 
-        // 数据处理：将 AKShare 格式转换为 ECharts 格式
-        // Akshare: {日期, 开盘, 收盘, 最高, 最低, 成交量, ...}
-        // ECharts K 线: [date, open, close, low, high]
-        // ECharts 成交量: [index, volume, sign(+1 for rise, -1 for fall)]
-        const processedData = { dates: [], kData: [], volumes: [] };
-        for (let i = 0; i < rawData.length; i++) {
-            const item = rawData[i];
-             // *** 从实际 API 响应中验证键 ***
-             const date = item['日期']; // 应该是 ECharts 能够理解的“YYYY-MM-DD”或类似格式
-             const open = parseFloat(item['开盘']);
-             const close = parseFloat(item['收盘']);
-             const low = parseFloat(item['最低']);
-             const high = parseFloat(item['最高']);
-             const volume = parseFloat(item['成交量']);
-
-             // 基本数据验证
-             if (!date || isNaN(open) || isNaN(close) || isNaN(low) || isNaN(high) || isNaN(volume)) {
-                  console.warn("Skipping invalid data point:", item);
-                  continue;
-             }
-
-            processedData.dates.push(date);
-            processedData.kData.push([open, close, low, high]);
-            processedData.volumes.push([i, volume, open > close ? -1 : 1]); // index, volume, sign
-        }
-
-        if (processedData.dates.length === 0) {
-             if (chartLoadingElement) chartLoadingElement.textContent = '处理后无有效K线数据。';
-             if (chartLoadingElement) chartLoadingElement.style.display = 'block';
-             return;
-        }
+        // 提取日期作为 X 轴数据
+        const dates = processedData.map(item => item[0]);
+        // 提取 OHLC 数据
+        const ohlcData = processedData.map(item => item.slice(1, 5)); // 提取 开, 收, 低, 高
+        // 提取成交量数据
+        const volumes = processedData.map((item, index) => [index, item[5], item[1] > item[2] ? -1 : 1]); // [index, volume, sign for color]
 
 
-        // 计算移动平均线（使用收盘价）
-        const ma5 = calculateMA(5, processedData.kData.map(k => k[1])); // 基于收盘价的 MA（索引 1）
-        const ma10 = calculateMA(10, processedData.kData.map(k => k[1]));
-        const ma20 = calculateMA(20, processedData.kData.map(k => k[1]));
-
-        // ECharts 选项配置
+        // ECharts 配置项
         const option = {
-            // backgroundColor: '#fff', // 可选的背景颜色
-            animation: false,
-            legend: { bottom: 10, left: 'center', data: ['日K', 'MA5', 'MA10', 'MA20'] },
-            tooltip: {
+            animation: false, // 关闭动画提高性能
+            legend: {
+                bottom: 10,
+                left: 'center',
+                data: ['日K', 'MA5', 'MA10', 'MA20'] // 图例
+            },
+            tooltip: { // 提示框
                 trigger: 'axis',
-                axisPointer: { type: 'cross' },
-                // 简化的工具提示，根据需要进行自定义
-                formatter: function (params) {
-                     const dataIndex = params[0].dataIndex;
-                     const kItem = processedData.kData[dataIndex]; // [open, close, low, high]
-                     let ret = `${processedData.dates[dataIndex]}<br/>`;
-                     ret += `开: ${kItem[0].toFixed(2)} 收: ${kItem[1].toFixed(2)}<br/>`;
-                     ret += `低: ${kItem[2].toFixed(2)} 高: ${kItem[3].toFixed(2)}<br/>`;
-                     params.forEach(p => {
-                         if (p.seriesName.startsWith('MA')) {
-                              ret += `${p.seriesName}: ${p.value !== '-' ? parseFloat(p.value).toFixed(2) : '-'}<br/>`;
-                         } else if (p.seriesName === 'Volume') {
-                             ret += `成交量: ${formatLargeNumber(p.value[1], 0)}<br/>`;
-                         }
-                     });
-                     return ret;
+                axisPointer: {
+                    type: 'cross'
+                },
+                 //borderWidth: 1,
+                 //borderColor: '#ccc',
+                 //padding: 10,
+                 //textStyle: {
+                 //    color: '#000'
+                 //},
+                 //position: function (pos, params, el, elRect, size) {
+                 //  const obj = { top: 10 };
+                 //  obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
+                 //  return obj;
+                 //}
+                 // 可根据需要自定义提示框样式和内容 formatter
+                 formatter: function (params) {
+                    const dataIndex = params[0].dataIndex;
+                    const kData = ohlcData[dataIndex];
+                    const date = dates[dataIndex];
+                    let tooltipHtml = `${date}<br/>`;
+                    tooltipHtml += `开盘: ${kData[0]}<br/>`;
+                    tooltipHtml += `收盘: ${kData[1]}<br/>`;
+                    tooltipHtml += `最低: ${kData[2]}<br/>`;
+                    tooltipHtml += `最高: ${kData[3]}<br/>`;
+                    // 添加均线等其他 series 的值
+                    params.forEach(param => {
+                        if (param.seriesType === 'line') {
+                            tooltipHtml += `${param.seriesName}: ${param.value !== undefined ? param.value.toFixed(2) : '-'}<br/>`;
+                        }
+                    });
+                     tooltipHtml += `成交量: ${volumes[dataIndex][1]}<br/>`;
+                    return tooltipHtml;
+                 }
+            },
+            axisPointer: { // 坐标轴指示器联动
+                link: [{ xAxisIndex: 'all' }],
+                label: {
+                    backgroundColor: '#777'
                 }
             },
-            axisPointer: { link: [{ xAxisIndex: 'all' }], label: { backgroundColor: '#777' } },
-            toolbox: {
-                 right: 20,
+            toolbox: { // 工具栏
                 feature: {
-                    dataZoom: { yAxisIndex: false },
-                    brush: { type: ['lineX', 'clear'] },
-                    restore: {},
-                    saveAsImage: {}
+                    dataZoom: { yAxisIndex: false }, // 区域缩放
+                    brush: { type: ['lineX', 'clear'] }, // 选框工具
+                    restore: {}, // 配置项还原
+                    saveAsImage: {} // 保存为图片
                 }
             },
-            grid: [
-                { left: '8%', right: '8%', height: '50%' }, // K 线图
-                { left: '8%', right: '8%', top: '65%', height: '16%' } // 成交量图
+            grid: [ // 上下两个图表区域
+                { // K 线图区域
+                    left: '10%',
+                    right: '8%',
+                    height: '50%' // 顶部 K 线占 50% 高度
+                },
+                { // 成交量图区域
+                    left: '10%',
+                    right: '8%',
+                    top: '65%', // 从 65% 的位置开始
+                    height: '16%' // 底部成交量占 16% 高度
+                }
             ],
-            xAxis: [
-                { type: 'category', data: processedData.dates, scale: true, boundaryGap: false, axisLine: { onZero: false }, splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, min: 'dataMin', max: 'dataMax', axisPointer: { z: 100 } },
-                { type: 'category', gridIndex: 1, data: processedData.dates, scale: true, boundaryGap: false, axisLine: { onZero: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: true }, min: 'dataMin', max: 'dataMax' }
+            xAxis: [ // X 轴配置 (共享)
+                { // K线图的 X 轴
+                    type: 'category',
+                    data: dates,
+                    scale: true,
+                    boundaryGap: false,
+                    axisLine: { onZero: false },
+                    splitLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: { show: false }, // 不显示 K 线图的 X 轴标签
+                    min: 'dataMin',
+                    max: 'dataMax',
+                    axisPointer: { z: 100 }
+                },
+                { // 成交量图的 X 轴
+                    type: 'category',
+                    gridIndex: 1, // 关联到第二个 grid
+                    data: dates,
+                    scale: true,
+                    boundaryGap: false,
+                    axisLine: { onZero: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: true }, // 显示成交量图的 X 轴标签
+                    min: 'dataMin',
+                    max: 'dataMax'
+                }
             ],
-            yAxis: [
-                { scale: true, splitArea: { show: false }, axisLabel: { inside: false, formatter: '{value}\n' } }, // 价格轴
-                { scale: true, gridIndex: 1, splitNumber: 2, axisLabel: { show: false }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false } } // 成交量轴
+            yAxis: [ // Y 轴配置
+                { // K 线图的 Y 轴 (价格)
+                    scale: true,
+                    splitArea: { show: true }
+                },
+                { // 成交量图的 Y 轴
+                    scale: true,
+                    gridIndex: 1, // 关联到第二个 grid
+                    splitNumber: 2,
+                    axisLabel: { show: false },
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false }
+                }
             ],
-            dataZoom: [
-                { type: 'inside', xAxisIndex: [0, 1], start: Math.max(0, 100 - (365 / processedData.dates.length * 100)), end: 100 }, // 默认视图 ~1 年（如果可能）
-                { show: true, xAxisIndex: [0, 1], type: 'slider', top: '85%', start: Math.max(0, 100 - (365 / processedData.dates.length * 100)), end: 100 }
+            dataZoom: [ // 区域缩放配置
+                { // 内置型，在 K 线图内部拖动
+                    type: 'inside',
+                    xAxisIndex: [0, 1], // 同时缩放 K 线和成交量的 X 轴
+                    start: 80, // 默认显示最近 20% 的数据
+                    end: 100
+                },
+                { // 滑块型，在图表下方显示
+                    show: true,
+                    xAxisIndex: [0, 1], // 同时控制 K 线和成交量的 X 轴
+                    type: 'slider',
+                    top: '85%', // 放在成交量图下方
+                    start: 80,
+                    end: 100
+                }
             ],
-            series: [
-                { name: '日K', type: 'candlestick', data: processedData.kData, itemStyle: { color: '#FD1050', color0: '#0CF49B', borderColor: '#FD1050', borderColor0: '#0CF49B' } }, // 红色上涨，绿色下跌
-                { name: 'MA5', type: 'line', data: ma5, smooth: true, showSymbol: false, lineStyle: { opacity: 0.7, width: 1 } },
-                { name: 'MA10', type: 'line', data: ma10, smooth: true, showSymbol: false, lineStyle: { opacity: 0.7, width: 1 } },
-                { name: 'MA20', type: 'line', data: ma20, smooth: true, showSymbol: false, lineStyle: { opacity: 0.7, width: 1 } },
-                { name: 'Volume', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: processedData.volumes, itemStyle: { color: ({ data }) => (data[2] === 1 ? '#FD1050' : '#0CF49B') } } // index, volume, sign
+            series: [ // 图表系列数据
+                {
+                    name: '日K',
+                    type: 'candlestick',
+                    data: ohlcData, // OHLC 数据
+                    itemStyle: {
+                        color: '#ec0000', // 阳线颜色
+                        color0: '#00da3c', // 阴线颜色
+                        borderColor: '#8A0000',
+                        borderColor0: '#008F28'
+                    }
+                },
+                // --- 添加均线 (MA) ---
+                {
+                    name: 'MA5',
+                    type: 'line',
+                    data: calculateMA(5, ohlcData), // 计算 5 日均线
+                    smooth: true,
+                    lineStyle: { opacity: 0.5 }
+                },
+                {
+                    name: 'MA10',
+                    type: 'line',
+                    data: calculateMA(10, ohlcData), // 计算 10 日均线
+                    smooth: true,
+                    lineStyle: { opacity: 0.5 }
+                },
+                {
+                    name: 'MA20',
+                    type: 'line',
+                    data: calculateMA(20, ohlcData), // 计算 20 日均线
+                    smooth: true,
+                    lineStyle: { opacity: 0.5 }
+                },
+                // --- 成交量柱状图 ---
+                {
+                    name: 'Volume',
+                    type: 'bar',
+                    xAxisIndex: 1, // 使用第二个 X 轴
+                    yAxisIndex: 1, // 使用第二个 Y 轴
+                    data: volumes, // 成交量数据 [index, volume, sign]
+                    itemStyle: {
+                        color: ({ data }) => (data[2] === 1 ? '#ec0000' : '#00da3c') // 根据涨跌决定颜色
+                    }
+                }
             ]
         };
 
-        // 将选项应用于图表
-        myChart.setOption(option);
-    }
-
-    // --- 辅助函数：计算移动平均线 ---
-    function calculateMA(dayCount, data) { // data 应该是数字数组（例如，收盘价）
-        var result = [];
-        for (var i = 0, len = data.length; i < len; i++) {
-            if (i < dayCount - 1) {
-                result.push('-'); // 对于不充分的数据点，使用“-”
-                continue;
+        // --- Helper function to calculate Moving Average ---
+        function calculateMA(dayCount, ohlcData) {
+            var result = [];
+            for (var i = 0, len = ohlcData.length; i < len; i++) {
+                if (i < dayCount -1) { // 前面几天无法计算均线
+                    result.push('-'); // ECharts 能识别 '-' 为空值
+                    continue;
+                }
+                var sum = 0;
+                for (var j = 0; j < dayCount; j++) {
+                    sum += parseFloat(ohlcData[i - j][1]); // 计算收盘价 (index 1) 的均值
+                }
+                result.push(+(sum / dayCount).toFixed(2)); // 保留两位小数
             }
-            var sum = 0;
-            for (var j = 0; j < dayCount; j++) {
-                sum += data[i - j];
-            }
-            result.push(+(sum / dayCount).toFixed(2)); // 计算平均值并格式化
+            return result;
         }
-        return result;
-    }
-
-     // --- 辅助函数：格式化大数字（基本） ---
-     function formatLargeNumber(num, decimalPlaces = 2) {
-         if (num === null || num === undefined || isNaN(num)) return 'N/A';
-         num = Number(num);
-         if (Math.abs(num) >= 1e8) { // 亿
-             return (num / 1e8).toFixed(decimalPlaces) + '亿';
-         } else if (Math.abs(num) >= 1e4) { // 万
-             return (num / 1e4).toFixed(decimalPlaces) + '万';
-         } else {
-             return num.toFixed(decimalPlaces);
-         }
-     }
 
 
-    // --- 初始数据加载 ---
-    // 首先加载 K 线（默认所有历史记录）和基本信息
-    await fetchHistoricalData(symbol); // 使用 await 确保 K 线在可能需要的其他操作之前加载
-    await fetchCompanyInfo(symbol); // 还要最初加载公司信息以获取名称
-    fetchRealtimeQuote(symbol); // 加载报价，但无需等待
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
 
-    // --- 可选：K 线时间范围选择器逻辑 ---
-    if (rangeSelector) {
-        rangeSelector.addEventListener('click', (event) => {
-            if (event.target.tagName === 'BUTTON') {
-                const range = event.target.dataset.range;
-                let startDate = null;
-                const endDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-                const now = new Date();
-
-                // 更新活动按钮样式
-                rangeSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-                event.target.classList.add('active');
-
-                if (range === '1m') startDate = new Date(new Date(now).setMonth(now.getMonth() - 1)).toISOString().slice(0, 10).replace(/-/g, '');
-                else if (range === '3m') startDate = new Date(new Date(now).setMonth(now.getMonth() - 3)).toISOString().slice(0, 10).replace(/-/g, '');
-                else if (range === '1y') startDate = new Date(new Date(now).setFullYear(now.getFullYear() - 1)).toISOString().slice(0, 10).replace(/-/g, '');
-                else if (range === '3y') startDate = new Date(new Date(now).setFullYear(now.getFullYear() - 3)).toISOString().slice(0, 10).replace(/-/g, '');
-                // “all”范围意味着 startDate 保持为 null
-
-                // 重新获取并渲染所选范围的 K 线数据
-                fetchHistoricalData(symbol, 'daily', 'qfq', startDate, endDate);
-            }
+        // (可选) 监听窗口大小变化，自适应调整图表大小
+        window.addEventListener('resize', () => {
+            myChart.resize();
         });
     }
 
-}); // DOMContentLoaded 结束
+    // --- 执行数据获取和渲染 ---
+    fetchHistoricalData(symbol).then(historicalData => {
+        if (historicalData) {
+            renderKlineChart(historicalData);
+        }
+        // 如果 historicalData 为 null，则错误信息已在 fetchHistoricalData 中显示
+    });
+
+});
