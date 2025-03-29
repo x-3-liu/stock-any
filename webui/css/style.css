@@ -97,3 +97,10 @@ footer {
     font-size: 0.8em;
     color: #777;
 }
+
+
+
+#stock-table tbody tr[data-symbol]:hover {
+    cursor: pointer;
+    background-color: #f0f8ff; 
+}
