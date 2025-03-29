@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股列表 - 股票分析</title>
+    <!-- Link to your general CSS file -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Link to specific CSS for this page (optional) -->
+    <!-- <link rel="stylesheet" href="css/stock_list.css"> -->
+</head>
+<body>
+    <header>
+        <h1>A股实时列表</h1>
+        <nav>
+            <!-- Links to other future pages -->
+            <a href="index.html">首页</a>
+            <a href="stock_list.html" class="active">A股列表</a>
+            <!-- <a href="stock_detail.html">个股详情</a> -->
+            <!-- <a href="strategy_tester.html">策略测试</a> -->
+        </nav>
+    </header>
+
+    <main>
+        <h2>数据加载中...</h2>
+        <div id="stock-table-container">
+            <table id="stock-table">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>最新价</th>
+                        <th>涨跌额</th>
+                        <th>涨跌幅</th>
+                        <th>成交量(手)</th>
+                        <th>成交额(元)</th>
+                        <th>换手率</th>
+                        <th>市盈率(动)</th>
+                        <!-- Add other columns you want from the API response -->
+                    </tr>
+                </thead>
+                <tbody id="stock-table-body">
+                    <!-- Stock data rows will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <p id="last-updated">最后更新时间: N/A</p>
+    </main>
+
+    <footer>
+        <p>数据来源: AKShare (via AKTools)</p>
+    </footer>
+
+    <!-- Link to your JavaScript file for this page -->
+    <!-- IMPORTANT: Place script tags usually at the end of body for faster perceived page load -->
+    <script src="js/stock_list.js"></script>
+</body>
+</html>
